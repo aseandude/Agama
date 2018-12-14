@@ -1,39 +1,34 @@
 const { isKomodoCoin } = require('agama-wallet-lib/src/coin-helpers');
-
-const txDecoder = {
-  default: require('../../electrumjs/electrumjs.txdecoder.js'),
-  zcash: require('../../electrumjs/electrumjs.txdecoder-2bytes.js'),
-  pos: require('../../electrumjs/electrumjs.txdecoder-pos.js'),
-};
+const _txDecoder = require('agama-wallet-lib/src/transaction-decoder');
 
 module.exports = (api) => {
   api.isZcash = (network) => {
+    if (isKomodoCoin(network)) {
+      network = 'kmd';
+    }
+
     if (api.electrumJSNetworks[network.toLowerCase()] &&
-    api.electrumJSNetworks[network.toLowerCase()].isZcash) {
+        api.electrumJSNetworks[network.toLowerCase()].isZcash) {
       return true;
     }
   };
 
   api.isPos = (network) => {
     if (api.electrumJSNetworks[network.toLowerCase()] &&
-    api.electrumJSNetworks[network.toLowerCase()].isPoS) {
+        api.electrumJSNetworks[network.toLowerCase()].isPoS) {
       return true;
     }
   };
 
   api.electrumJSTxDecoder = (rawtx, networkName, network, insight) => {
-    if (api.isZcash(networkName)) {
-      return txDecoder.zcash(rawtx, network);
-    } else if (api.isPos(networkName)) {
-      return txDecoder.pos(rawtx, network);
-    } else if (insight) {
-      console.log('insight decoder');
-    } else {
-      return txDecoder.default(rawtx, network);
-    }
+    return _txDecoder(rawtx, network);
   };
 
   api.getNetworkData = (network) => {
+    if (api.electrumJSNetworks[network.toLowerCase()]) {
+      return api.electrumJSNetworks[network.toLowerCase()];
+    }
+  
     let coin = api.findNetworkObj(network) || api.findNetworkObj(network.toUpperCase()) || api.findNetworkObj(network.toLowerCase());
     const coinUC = coin ? coin.toUpperCase() : null;
 
@@ -212,10 +207,6 @@ module.exports = (api) => {
       let _currentElectrumServer;
       network = network.toLowerCase();
 
-      /*console.log(`ecl net ${network}`);
-      console.log(api.electrumCoins[network]);
-      console.log(api.electrumServers[network].serverList);*/
-
       if (api.electrumCoins[network]) {
         _currentElectrumServer = api.electrumCoins[network];
       } else {
@@ -243,7 +234,12 @@ module.exports = (api) => {
             proto: api.electrumCoins[network] && api.electrumCoins[network].server.proto || _currentElectrumServer.proto,
           };
 
-          return new api.electrumJSCore(electrum.port, electrum.ip, electrum.proto, api.appConfig.spv.socketTimeout);
+          return new api.electrumJSCore(
+            electrum.port,
+            electrum.ip,
+            electrum.proto,
+            api.appConfig.spv.socketTimeout
+          );
         }
       }
     }

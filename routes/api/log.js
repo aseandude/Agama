@@ -6,7 +6,11 @@ module.exports = (api) => {
   api.log = (msg, type) => {
     if (api.appConfig.dev ||
       api.appConfig.debug) {
-      console.log(msg);
+      if (type) {
+        console.log(`\x1b[94m${type}`, '\x1b[0m', msg);
+      } else {
+        console.log(msg);
+      }
     }
 
     api.appRuntimeLog.push({
@@ -94,7 +98,11 @@ module.exports = (api) => {
       const _log = JSON.parse(JSON.stringify(api.appRuntimeLog));
       const _time = secondsToString(Date.now() / 1000).replace(/\s+/g, '-');
 
-      const err = fs.writeFileSync(`${api.agamaDir}/shepherd/log/log-${_time}.json`, JSON.stringify(_log), 'utf8');
+      const err = fs.writeFileSync(
+        `${api.agamaDir}/shepherd/log/log-${_time}.json`,
+        JSON.stringify(_log),
+        'utf8'
+      );
 
       if (err) {
         const retObj = {
